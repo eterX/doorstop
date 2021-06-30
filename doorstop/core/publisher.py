@@ -113,7 +113,7 @@ def publish(
 
     # Create index
     if index and count:
-        _index(path, tree=obj if is_tree(obj) else None)
+        _index(path, template=template, tree=obj if is_tree(obj) else None)
 
     # Create traceability matrix
     if index and matrix and count:
@@ -129,7 +129,7 @@ def publish(
         return None
 
 
-def _index(directory, index=INDEX, extensions=('.html',), tree=None):
+def _index(directory, index=INDEX, extensions=('.html',), template=HTMLTEMPLATE, tree=None):
     """Create an HTML index of all files in a directory.
 
     :param directory: directory for index
@@ -154,82 +154,30 @@ def _index(directory, index=INDEX, extensions=('.html',), tree=None):
         log.warning("no files for {}".format(index))
 
 
-def _lines_index(filenames, charset='UTF-8', tree=None):
+def _lines_index(filenames, template=HTMLTEMPLATE, charset='UTF-8', tree=None):
     """Yield lines of HTML for index.html.
 
     :param filesnames: list of filenames to add to the index
+    :param template: template passed as argument. A template+'_index' is also expected in the same folder.
     :param charset: character encoding for output
     :param tree: optional tree to determine index structure
 
     """
-    yield '<!DOCTYPE html>'
-    yield '<head>'
-    yield (
-        '<meta http-equiv="content-type" content="text/html; '
-        'charset={charset}">'.format(charset=charset)
-    )
-    yield '<style type="text/css">'
-    yield from _lines_css()
-    yield '</style>'
-    yield '</head>'
-    yield '<body>'
-    # Tree structure
-    text = tree.draw() if tree else None
-    if text:
-        yield ''
-        yield '<h3>Tree Structure:</h3>'
-        yield '<pre><code>' + text + '</pre></code>'
-    # Additional files
-    if filenames:
-        if text:
-            yield ''
-            yield '<hr>'
-        yield ''
-        yield '<h3>Published Documents:</h3>'
-        yield '<p>'
-        yield '<ul>'
-        for filename in filenames:
-            name = os.path.splitext(filename)[0]
-            yield '<li> <a href="{f}">{n}</a> </li>'.format(f=filename, n=name)
-        yield '</ul>'
-        yield '</p>'
-    # Traceability table
-    documents = tree.documents if tree else None
-    if documents:
-        if text or filenames:
-            yield ''
-            yield '<hr>'
-        yield ''
-        # table
-        yield '<h3>Item Traceability:</h3>'
-        yield '<p>'
-        yield '<table>'
-        # header
-        for document in documents:  # pylint: disable=not-an-iterable
-            yield '<col width="100">'
-        yield '<tr>'
-        for document in documents:  # pylint: disable=not-an-iterable
-            link = '<a href="{p}.html">{p}</a>'.format(p=document.prefix)
-            yield ('  <th height="25" align="center"> {link} </th>'.format(link=link))
-        yield '</tr>'
-        # data
-        for index, row in enumerate(tree.get_traceability()):
-            if index % 2:
-                yield '<tr class="alt">'
-            else:
-                yield '<tr>'
-            for item in row:
-                if item is None:
-                    link = ''
-                else:
-                    link = _format_html_item_link(item)
-                yield '  <td height="25" align="center"> {} </td>'.format(link)
-            yield '</tr>'
-        yield '</table>'
-        yield '</p>'
-    yield ''
-    yield '</body>'
-    yield '</html>'
+    try:
+        html = bottle_template(
+            template +'_index',
+            charset= charset,
+            common=common,
+            tree=tree,
+            filenames=filenames,
+            CSS=CSS,
+            os=os,
+            _format_html_item_link=_format_html_item_link
+            )
+    except Exception:
+        log.error("Problem parsing the template %s", template +'_index')
+        raise
+    yield '\n'.join(html.split(os.linesep))
 
 
 def _lines_css():
