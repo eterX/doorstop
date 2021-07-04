@@ -148,7 +148,7 @@ def _index(directory, index=INDEX, extensions=('.html',), template=HTMLTEMPLATE,
     if filenames:
         path = os.path.join(directory, index)
         log.info("creating an {}...".format(index))
-        lines = _lines_index(sorted(filenames), tree=tree)
+        lines = _lines_index(sorted(filenames), tree=tree, template=template) #defaulted to sidebar_index.tpl
         common.write_lines(lines, path)
     else:
         log.warning("no files for {}".format(index))
@@ -164,7 +164,7 @@ def _lines_index(filenames, template=HTMLTEMPLATE, charset='UTF-8', tree=None):
 
     """
     try:
-        html = bottle_template(
+        html = bottle.jinja2_template(
             template +'_index',
             charset= charset,
             common=common,

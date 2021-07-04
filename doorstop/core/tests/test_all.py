@@ -37,6 +37,7 @@ CHECK_EXPORTED_CONTENT = True
 #  4. set CHECK_PUBLISHED_CONTENT to True
 CHECK_PUBLISHED_CONTENT = True
 
+test_publish_templates=["test_jinja2",]
 
 class TestItem(unittest.TestCase):
     """Integration tests for the Item class."""
@@ -543,7 +544,7 @@ class TestPublisher(unittest.TestCase):
         """Verify an HTML file can be created."""
         path = os.path.join(self.temp, 'published.html')
         # Act
-        path2 = core.publisher.publish(self.document, path, '.html')
+        path2 = core.publisher.publish(self.document, path, '.html')# template=test_publish_templates[0])
         # Assert
         self.assertIs(path, path2)
         self.assertTrue(os.path.isfile(path))
@@ -555,7 +556,7 @@ class TestPublisher(unittest.TestCase):
             item.link('badlink')
             dirpath = os.path.join(self.temp, 'html')
             # Act
-            dirpath2 = core.publisher.publish(self.tree, dirpath)
+            dirpath2 = core.publisher.publish(self.tree, dirpath)# template=test_publish_templates[0])
             # Assert
             self.assertIs(dirpath, dirpath2)
         finally:
@@ -615,12 +616,27 @@ class TestPublisher(unittest.TestCase):
         sys.version_info < (3, 8),
         reason="Output format differs with older versions of Python",
     )
+
     def test_lines_html_document_linkify(self):
         """Verify HTML can be published from a document."""
         path = os.path.join(FILES, 'published.html')
         expected = common.read_text(path)
         # Act
         lines = core.publisher.publish_lines(self.document, '.html', linkify=True)
+        text = ''.join(line + '\n' for line in lines)
+        # Assert
+        if CHECK_PUBLISHED_CONTENT:
+            self.assertEqual(expected, text)
+        common.write_text(text, path)
+
+    def test_lines_html_jinja2_support(self):
+        """Verify Jinja2 engine support
+        as if run doortop publush all -H --template test_jinja2 """
+        path = os.path.join(FILES, test_publish_templates[0]+'_index.html')
+        expected = common.read_text(path)
+        # Act
+        lines = core.publisher._lines_index([test_publish_templates[0]+'_index.html',],
+                                            template=test_publish_templates[0], charset='UTF-8',)
         text = ''.join(line + '\n' for line in lines)
         # Assert
         if CHECK_PUBLISHED_CONTENT:
